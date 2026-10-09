@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Yoga Shop</title>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #f0fdf4, #ecfeff);
+            color: #1f2937;
+        }
+        .container {
+            max-width: 900px;
+            margin: 40px auto;
+            padding: 24px;
+            background: #fff;
+            border-radius: 20px;
+            box-shadow: 0 16px 32px rgba(0,0,0,0.08);
+        }
+        h1 {
+            margin: 0;
+            color: #15803d;
+        }
+        .subtitle {
+            margin-top: 8px;
+            color: #4b5563;
+        }
+        .promo {
+            display: inline-block;
+            margin: 16px 0 24px;
+            background: #dcfce7;
+            color: #166534;
+            padding: 10px 16px;
+            border-radius: 999px;
+            font-weight: bold;
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: 1.4fr 1fr;
+            gap: 24px;
+        }
+        .card {
+            border: 1px solid #e5e7eb;
+            border-radius: 16px;
+            padding: 18px;
+            background: #f9fafb;
+        }
+        .product {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 14px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        .product:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
+        .product input {
+            width: 80px;
+            padding: 8px;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            text-align: center;
+            font-size: 1rem;
+        }
+        button {
+            width: 100%;
+            margin-top: 18px;
+            border: none;
+            border-radius: 12px;
+            padding: 12px 18px;
+            background: linear-gradient(135deg, #16a34a, #22c55e);
+            color: white;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .summary {
+            background: #f0fdf4;
+        }
+        .summary-row {
+            display: flex;
+            justify-content: space-between;
+            margin: 12px 0;
+        }
+        .total {
+            font-size: 1.3rem;
+            font-weight: bold;
+        }
+        .message {
+            margin-top: 16px;
+            min-height: 20px;
+            color: #166534;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Yoga Shop</h1>
+        <p class="subtitle">Buah segar, harga bersahabat, dan checkout cepat.</p>
+        <div class="promo">Diskon 10% untuk pembelian di atas Rp50.000</div>
+
+        <div class="grid">
+            <div class="card">
+                <div class="product">
+                    <span>Apel</span>
+                    <div>
+                        <strong>Rp12.000</strong>
+                        <input type="number" id="apel" min="0" value="0">
+                    </div>
+                </div>
+                <div class="product">
+                    <span>Jeruk</span>
+                    <div>
+                        <strong>Rp9.000</strong>
+                        <input type="number" id="jeruk" min="0" value="0">
+                    </div>
+                </div>
+                <div class="product">
+                    <span>Pisang</span>
+                    <div>
+                        <strong>Rp7.000</strong>
+                        <input type="number" id="pisang" min="0" value="0">
+                    </div>
+                </div>
+                <button id="checkoutBtn">Checkout</button>
+            </div>
+
+            <div class="card summary">
+                <h2>Ringkasan</h2>
+                <div class="summary-row"><span>Subtotal</span><span id="subtotal">Rp0</span></div>
+                <div class="summary-row"><span>Diskon</span><span id="discount">Rp0</span></div>
+                <div class="summary-row total"><span>Total</span><span id="total">Rp0</span></div>
+                <div class="message" id="message"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const checkoutBtn = document.getElementById('checkoutBtn');
+        const messageBox = document.getElementById('message');
+
+        function formatRupiah(value) {
+            return new Intl.NumberFormat('id-ID', {
+                style: 'currency',
+                currency: 'IDR',
+                maximumFractionDigits: 0
+            }).format(value);
+        }
+
+        async function checkout() {
+            const payload = {
+                apel: Number(document.getElementById('apel').value || 0),
+                jeruk: Number(document.getElementById('jeruk').value || 0),
+                pisang: Number(document.getElementById('pisang').value || 0)
+            };
+
+            try {
+                const response = await fetch('/checkout', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                const responseText = await response.text();
+                let result;
+                try {
+                    result = responseText ? JSON.parse(responseText) : null;
+                } catch {
+                    throw new Error(
+                        `Respons checkout tidak valid (HTTP ${response.status}). Pastikan server berjalan dan endpoint /checkout tersedia.`
+                    );
+                }
+
+                if (!result || typeof result !== 'object') {
+                    throw new Error(
+                        `Server tidak mengembalikan data checkout (HTTP ${response.status}). Pastikan server berjalan dan endpoint /checkout tersedia.`
+                    );
+                }
+
+                if (!response.ok) {
+                    throw new Error(result.message || `Checkout gagal (HTTP ${response.status}).`);
+                }
+
+                document.getElementById('subtotal').textContent = formatRupiah(result.subtotal);
+                document.getElementById('discount').textContent = formatRupiah(result.discount);
+                document.getElementById('total').textContent = formatRupiah(result.total);
+
+                if (result.discount_applied) {
+                    messageBox.textContent = 'Diskon berhasil diterapkan!';
+                    messageBox.style.color = '#166534';
+                } else {
+                    messageBox.textContent = 'Belum cukup untuk diskon, tingkatkan total belanjaan Anda.';
+                    messageBox.style.color = '#b45309';
+                }
+            } catch (error) {
+                messageBox.textContent = error.message;
+                messageBox.style.color = '#b91c1c';
+            }
+        }
+
+        checkoutBtn.addEventListener('click', checkout);
+    </script>
+</body>
+</html>
